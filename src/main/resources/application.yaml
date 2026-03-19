@@ -1,0 +1,51 @@
+spring:
+  application:
+    name: qureka
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioSpeechAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioTranscriptionAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiImageAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiModerationAutoConfiguration
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+  ai:
+    openai:
+      api-key: sk-dummy-key-for-local-test
+      chat:
+        options:
+          model: gpt-4o-mini
+          temperature: 0.7
+          max-tokens: 8000
+
+server:
+  port: 8080
+
+jwt:
+  access-token-secret: local-test-access-secret-key-32chars!!
+  refresh-token-secret: local-test-refresh-secret-key-32chars!
+  access-token-expires-in: 3600000
+  refresh-token-expires-in: 604800000
+
+cors:
+  allowed-origins: http://localhost:5173
+  allow-all-origins: true
+
+app:
+  node-env: development
+  test-userid:
+  backend-url: http://localhost:8080
+
+logging:
+  level:
+    root: INFO
+    com.qureka: DEBUG
