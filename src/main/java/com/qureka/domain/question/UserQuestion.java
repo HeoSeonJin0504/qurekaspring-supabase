@@ -47,7 +47,7 @@ public class UserQuestion {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "question_data", columnDefinition = "jsonb", nullable = false)
     @Builder.Default
-    @JsonIgnore   // question_data Map 자체는 숨기고 question_text로만 노출
+    @JsonIgnore
     private Map<String, Object> questionData = Map.of();
 
     @CreationTimestamp
@@ -56,8 +56,16 @@ public class UserQuestion {
     private OffsetDateTime createdAt;
 
     /**
-     * question_data = {"question_text": "JSON문자열"} 형태로 저장되어 있으므로
-     * question_data.question_text 값을 꺼내서 반환
+     * 프론트 transformQuestionItem(): id: item.question_id ?? item.id
+     * question_id 필드를 selection_id 값으로 함께 노출
+     */
+    @JsonProperty("question_id")
+    public Long getQuestionId() {
+        return selectionId;
+    }
+
+    /**
+     *   question_text: row.question_data?.question_text
      */
     @JsonProperty("question_text")
     public String getQuestionText() {

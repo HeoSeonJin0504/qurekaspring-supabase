@@ -1,5 +1,6 @@
 package com.qureka.domain.favorite;
 
+import com.qureka.domain.favorite.dto.FavoriteFolderResponse;
 import com.qureka.domain.favorite.dto.FavoriteQuestionResponse;
 import com.qureka.global.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
@@ -19,12 +20,27 @@ public class FavoriteController {
 
     private final FavoriteService favoriteService;
 
+    private Long parseLongSafe(Object value) {
+        if (value == null) return null;
+        String str = String.valueOf(value).trim();
+        if (str.isEmpty() || str.equalsIgnoreCase("null")) return null;
+        try { return Long.parseLong(str); }
+        catch (NumberFormatException e) { return null; }
+    }
+
+    private Short parseShortSafe(Object value, short defaultVal) {
+        if (value == null) return defaultVal;
+        String str = String.valueOf(value).trim();
+        if (str.isEmpty() || str.equalsIgnoreCase("null")) return defaultVal;
+        try { return Short.parseShort(str); }
+        catch (NumberFormatException e) { return defaultVal; }
+    }
+
+    /** 폴더 목록 — question_count 포함 */
     @GetMapping("/folders/{userId}")
     public ResponseEntity<Map<String, Object>> getFolders(@PathVariable Long userId) {
-        return ResponseEntity.ok(Map.of(
-                "success", true,
-                "folders", favoriteService.getFolders(userId)
-        ));
+        List<FavoriteFolderResponse> folders = favoriteService.getFolders(userId);
+        return ResponseEntity.ok(Map.of("success", true, "folders", folders));
     }
 
     @PostMapping("/folders")
@@ -73,10 +89,13 @@ public class FavoriteController {
             @RequestBody Map<String, Object> body,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
-        Long  questionId = Long.parseLong(String.valueOf(body.get("questionId")));
-        Long  folderId   = body.get("folderId") != null ? Long.parseLong(String.valueOf(body.get("folderId"))) : null;
-        Short qIdx       = body.get("questionIndex") != null
-                ? Short.parseShort(String.valueOf(body.get("questionIndex"))) : 0;
+        Long  questionId = parseLongSafe(body.get("questionId"));
+        Long  folderId   = parseLongSafe(body.get("folderId"));
+        Short qIdx       = parseShortSafe(body.get("questionIndex"), (short) 0);
+
+        if (questionId == null)
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "questionId가 필요합니다."));
+
         FavoriteQuestion fq = favoriteService.addQuestion(principal.getId(), folderId, questionId, qIdx);
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                 "success", true,
@@ -129,20 +148,15 @@ public class FavoriteController {
         ));
     }
 
-    /** 모든 즐겨찾기 문제 조회 — FavoriteQuestionResponse(flat snake_case) 로 반환 */
     @GetMapping("/questions/all/{userId}")
     public ResponseEntity<Map<String, Object>> getAllQuestions(@PathVariable Long userId) {
         List<FavoriteQuestionResponse> result = favoriteService.getAllQuestions(userId)
                 .stream()
                 .map(FavoriteQuestionResponse::new)
                 .toList();
-        return ResponseEntity.ok(Map.of(
-                "success", true,
-                "questions", result
-        ));
+        return ResponseEntity.ok(Map.of("success", true, "questions", result));
     }
 
-    /** 특정 폴더의 즐겨찾기 문제 조회 — 동일하게 flat DTO 반환 */
     @GetMapping("/folders/{folderId}/questions/{userId}")
     public ResponseEntity<Map<String, Object>> getByFolder(
             @PathVariable Long folderId,

@@ -1,5 +1,6 @@
 package com.qureka.domain.favorite;
 
+import com.qureka.domain.favorite.dto.FavoriteFolderResponse;
 import com.qureka.domain.question.QuestionRepository;
 import com.qureka.domain.question.UserQuestion;
 import com.qureka.domain.user.User;
@@ -25,15 +26,19 @@ public class FavoriteService {
     private final UserRepository             userRepository;
     private final QuestionRepository         userQuestionRepository;
 
+    /** question_count 포함하여 반환 */
     @Transactional
-    public List<FavoriteFolder> getFolders(Long userId) {
+    public List<FavoriteFolderResponse> getFolders(Long userId) {
         List<FavoriteFolder> folders = folderRepository.findByUserUserIndexOrderByCreatedAtAsc(userId);
         boolean hasDefault = folders.stream().anyMatch(f -> DEFAULT_FOLDER.equals(f.getFolderName()));
         if (folders.isEmpty() || !hasDefault) {
             getOrCreateDefaultFolder(userId);
             folders = folderRepository.findByUserUserIndexOrderByCreatedAtAsc(userId);
         }
-        return folders;
+        return folders.stream()
+                .map(f -> new FavoriteFolderResponse(f,
+                        folderRepository.countQuestionsByFolderId(f.getFolderId())))
+                .toList();
     }
 
     @Transactional
@@ -118,7 +123,6 @@ public class FavoriteService {
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> checkMultipleQuestions(Long userId, List<Map<String, Object>> questions) {
-        // null인 questionId 필터링 후 파싱
         List<Long> ids = questions.stream()
                 .map(q -> q.get("questionId"))
                 .filter(Objects::nonNull)
@@ -135,7 +139,6 @@ public class FavoriteService {
 
         return questions.stream().map(q -> {
             Object qIdRaw = q.get("questionId");
-            // null 또는 파싱 불가 항목은 즐겨찾기 아님으로 처리
             if (qIdRaw == null) {
                 Map<String, Object> status = new HashMap<>();
                 status.put("questionId", null);
