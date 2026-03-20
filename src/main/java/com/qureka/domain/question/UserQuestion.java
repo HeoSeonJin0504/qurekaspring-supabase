@@ -2,6 +2,8 @@ package com.qureka.domain.question;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.qureka.domain.user.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -18,6 +20,8 @@ import java.util.Map;
 @NoArgsConstructor @AllArgsConstructor
 @Builder
 public class UserQuestion {
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -54,4 +58,14 @@ public class UserQuestion {
     @Column(name = "created_at", nullable = false, updatable = false)
     @JsonProperty("created_at")
     private OffsetDateTime createdAt;
+
+    @JsonProperty("question_text")
+    public String getQuestionText() {
+        if (questionData == null || questionData.isEmpty()) return "{}";
+        try {
+            return MAPPER.writeValueAsString(questionData);
+        } catch (JsonProcessingException e) {
+            return "{}";
+        }
+    }
 }
