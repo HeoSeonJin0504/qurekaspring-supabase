@@ -118,17 +118,49 @@ public class FavoriteService {
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> checkMultipleQuestions(Long userId, List<Map<String, Object>> questions) {
+        // null인 questionId 필터링 후 파싱
         List<Long> ids = questions.stream()
-                .map(q -> Long.parseLong(String.valueOf(q.get("questionId")))).toList();
+                .map(q -> q.get("questionId"))
+                .filter(Objects::nonNull)
+                .map(v -> {
+                    try { return Long.parseLong(String.valueOf(v)); }
+                    catch (NumberFormatException e) { return null; }
+                })
+                .filter(Objects::nonNull)
+                .toList();
+
+        if (ids.isEmpty()) return List.of();
+
         List<FavoriteQuestion> favorites = questionRepository.findByUserIndexAndQuestionIds(userId, ids);
 
         return questions.stream().map(q -> {
-            Long  qId  = Long.parseLong(String.valueOf(q.get("questionId")));
+            Object qIdRaw = q.get("questionId");
+            // null 또는 파싱 불가 항목은 즐겨찾기 아님으로 처리
+            if (qIdRaw == null) {
+                Map<String, Object> status = new HashMap<>();
+                status.put("questionId", null);
+                status.put("questionIndex", (short) 0);
+                status.put("isFavorite", false);
+                return status;
+            }
+            Long qId;
+            try { qId = Long.parseLong(String.valueOf(qIdRaw)); }
+            catch (NumberFormatException e) {
+                Map<String, Object> status = new HashMap<>();
+                status.put("questionId", qIdRaw);
+                status.put("questionIndex", (short) 0);
+                status.put("isFavorite", false);
+                return status;
+            }
+
             Short qIdx = q.get("questionIndex") != null
                     ? Short.parseShort(String.valueOf(q.get("questionIndex"))) : (short) 0;
+
             Optional<FavoriteQuestion> match = favorites.stream()
                     .filter(f -> f.getQuestion().getSelectionId().equals(qId)
-                            && f.getQuestionIndex().equals(qIdx)).findFirst();
+                            && f.getQuestionIndex().equals(qIdx))
+                    .findFirst();
+
             Map<String, Object> status = new HashMap<>();
             status.put("questionId", qId);
             status.put("questionIndex", qIdx);

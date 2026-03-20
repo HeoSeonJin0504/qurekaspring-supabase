@@ -1,10 +1,13 @@
 package com.qureka.global.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.qureka.global.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -16,13 +19,16 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.web.filter.CorsFilter;
 
+import java.util.Map;
+
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final CorsFilter corsFilter;   // CorsConfig에서 등록한 Bean 주입
+    private final CorsFilter corsFilter;
+    private final ObjectMapper objectMapper;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -40,8 +46,17 @@ public class SecurityConfig {
                         .referrerPolicy(rp -> rp.policy(
                                 ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
                 )
+                // 인증 실패(토큰 없음/만료) 시 403 대신 401 반환 → 프론트 인터셉터가 토큰 갱신 시도
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                            response.setContentType(MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8");
+                            response.getWriter().write(
+                                    objectMapper.writeValueAsString(
+                                            Map.of("success", false, "message", "인증이 필요합니다.")));
+                        })
+                )
                 .authorizeHttpRequests(auth -> auth
-                        // CORS preflight 요청(OPTIONS)은 무조건 허용
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                         .requestMatchers(HttpMethod.GET,  "/", "/health").permitAll()
@@ -51,13 +66,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/auth/refresh-token").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/logout").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
-                        .requestMatchers(HttpMethod.GET,  "/api/summaries/**").permitAll()
-                        .requestMatchers(HttpMethod.GET,  "/api/questions/**").permitAll()
-                        .requestMatchers(HttpMethod.GET,  "/api/favorites/**").permitAll()
-                        .requestMatchers(HttpMethod.GET,  "/api/problem-summary-meta/**").permitAll()
+
+                        .requestMatchers(HttpMethod.GET, "/api/summaries/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/questions/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/favorites/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/problem-summary-meta/**").permitAll()
+
                         .anyRequest().authenticated()
                 )
-                // CorsFilter를 Security 필터 체인 맨 앞에 등록
                 .addFilterBefore(corsFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

@@ -9,8 +9,13 @@ import java.util.Optional;
 
 public interface FavoriteQuestionRepository extends JpaRepository<FavoriteQuestion, Long> {
 
-    List<FavoriteQuestion> findByUserUserIndexOrderByCreatedAtDesc(Long userIndex);
-    List<FavoriteQuestion> findByFolderFolderIdAndUserUserIndex(Long folderId, Long userIndex);
+    // question을 fetch join해서 LAZY 프록시 문제 방지 (Untitled 방지)
+    @Query("SELECT fq FROM FavoriteQuestion fq JOIN FETCH fq.question WHERE fq.user.userIndex = :userIndex ORDER BY fq.createdAt DESC")
+    List<FavoriteQuestion> findByUserUserIndexOrderByCreatedAtDesc(@Param("userIndex") Long userIndex);
+
+    @Query("SELECT fq FROM FavoriteQuestion fq JOIN FETCH fq.question WHERE fq.folder.folderId = :folderId AND fq.user.userIndex = :userIndex")
+    List<FavoriteQuestion> findByFolderFolderIdAndUserUserIndex(@Param("folderId") Long folderId,
+                                                                @Param("userIndex") Long userIndex);
 
     Optional<FavoriteQuestion> findByUserUserIndexAndQuestionSelectionIdAndQuestionIndex(
             Long userIndex, Long questionId, Short questionIndex);
@@ -18,7 +23,8 @@ public interface FavoriteQuestionRepository extends JpaRepository<FavoriteQuesti
     boolean existsByUserUserIndexAndQuestionSelectionIdAndQuestionIndex(
             Long userIndex, Long questionId, Short questionIndex);
 
-    @Query("SELECT fq FROM FavoriteQuestion fq WHERE fq.user.userIndex = :userId AND fq.question.selectionId IN :ids")
+    // question fetch join으로 question 필드 즉시 로드
+    @Query("SELECT fq FROM FavoriteQuestion fq JOIN FETCH fq.question WHERE fq.user.userIndex = :userId AND fq.question.selectionId IN :ids")
     List<FavoriteQuestion> findByUserIndexAndQuestionIds(@Param("userId") Long userId,
                                                          @Param("ids") List<Long> ids);
 }

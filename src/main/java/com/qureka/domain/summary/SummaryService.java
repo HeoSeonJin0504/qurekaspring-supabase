@@ -66,7 +66,8 @@ public class SummaryService {
     @Transactional(readOnly = true)
     public List<UserSummary> search(Long userId, String query, String typeStr) {
         SummaryType type = (typeStr != null && !typeStr.isBlank()) ? parseSummaryType(typeStr) : null;
-        return summaryRepository.searchByUserId(userId, (query != null && !query.isBlank()) ? query : null, type);
+        return summaryRepository.searchByUserId(userId,
+                (query != null && !query.isBlank()) ? query : null, type);
     }
 
     @Transactional(readOnly = true)
@@ -74,17 +75,25 @@ public class SummaryService {
         return summaryRepository.findMetaByUserId(userId);
     }
 
+    /** 프론트가 보내는 모든 요약 타입 문자열을 SummaryType enum으로 변환 */
     private SummaryType parseSummaryType(String type) {
+        if (type == null) throw new CustomException(ErrorCode.INVALID_SUMMARY_TYPE, "요약 타입이 없습니다.");
         return switch (type) {
-            case "기본 요약", "basic"       -> SummaryType.basic;
-            case "핵심 내용", "key_points"  -> SummaryType.key_points;
-            case "주제별 정리", "topic"     -> SummaryType.topic;
-            case "개요 작성", "outline"     -> SummaryType.outline;
-            case "키워드 추출", "keywords"  -> SummaryType.keywords;
+            case "기본 요약", "basic",
+                 "내용 요약_기본 요약"                               -> SummaryType.basic;
+            case "핵심 요약", "핵심 내용", "key_points",
+                 "내용 요약_핵심 요약", "내용 요약_핵심 내용"          -> SummaryType.key_points;
+            case "주제 요약", "주제별 정리", "topic",
+                 "내용 요약_주제 요약", "내용 요약_주제별 정리"         -> SummaryType.topic;
+            case "목차 요약", "개요 작성", "outline",
+                 "내용 요약_목차 요약", "내용 요약_개요 작성"           -> SummaryType.outline;
+            case "키워드 요약", "키워드 추출", "keywords",
+                 "내용 요약_키워드 요약", "내용 요약_키워드 추출"        -> SummaryType.keywords;
             default -> {
                 try { yield SummaryType.valueOf(type); }
                 catch (IllegalArgumentException e) {
-                    throw new CustomException(ErrorCode.INVALID_INPUT, "지원하지 않는 요약 타입입니다: " + type);
+                    throw new CustomException(ErrorCode.INVALID_SUMMARY_TYPE,
+                            "지원하지 않는 요약 타입입니다: " + type);
                 }
             }
         };

@@ -1,5 +1,6 @@
 package com.qureka.domain.auth;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.qureka.domain.user.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -18,6 +19,7 @@ public class RefreshToken {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;

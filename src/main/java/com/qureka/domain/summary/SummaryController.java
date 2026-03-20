@@ -19,8 +19,13 @@ public class SummaryController {
 
     private final SummaryService summaryService;
 
+    /** 요약 저장 — userId는 JWT에서 추출 */
     @PostMapping
-    public ResponseEntity<Map<String, Object>> save(@Valid @RequestBody SaveSummaryRequest req) {
+    public ResponseEntity<Map<String, Object>> save(
+            @Valid @RequestBody SaveSummaryRequest req,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        req.setUserId(principal.getId());   // 클라이언트 값 무시, 토큰 기준으로 덮어씀
         UserSummary saved = summaryService.save(req);
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                 "success", true,

@@ -1,5 +1,6 @@
 package com.qureka.domain.favorite;
 
+import com.qureka.domain.favorite.dto.FavoriteQuestionResponse;
 import com.qureka.global.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -27,23 +28,26 @@ public class FavoriteController {
     }
 
     @PostMapping("/folders")
-    public ResponseEntity<Map<String, Object>> createFolder(@RequestBody Map<String, Object> body) {
-        Long   userId     = Long.parseLong(String.valueOf(body.get("userId")));
+    public ResponseEntity<Map<String, Object>> createFolder(
+            @RequestBody Map<String, Object> body,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
         String folderName = (String) body.get("folderName");
         if (folderName == null || folderName.isBlank())
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", "필수 입력값이 누락되었습니다."));
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                 "success", true,
-                "folder", favoriteService.createFolder(userId, folderName, (String) body.get("description"))
+                "folder", favoriteService.createFolder(principal.getId(), folderName, (String) body.get("description"))
         ));
     }
 
     @PostMapping("/folders/ensure-default")
-    public ResponseEntity<Map<String, Object>> ensureDefault(@RequestBody Map<String, Object> body) {
-        Long userId = Long.parseLong(String.valueOf(body.get("userId")));
+    public ResponseEntity<Map<String, Object>> ensureDefault(
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
         return ResponseEntity.ok(Map.of(
                 "success", true,
-                "folder", favoriteService.getOrCreateDefaultFolder(userId)
+                "folder", favoriteService.getOrCreateDefaultFolder(principal.getId())
         ));
     }
 
@@ -58,25 +62,22 @@ public class FavoriteController {
     @DeleteMapping("/folders/{folderId}")
     public ResponseEntity<Map<String, Object>> deleteFolder(
             @PathVariable Long folderId,
-            @RequestParam(required = false) Long userId,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
-        Long resolvedId = userId != null ? userId : (principal != null ? principal.getId() : null);
-        if (resolvedId == null)
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("success", false, "message", "사용자 인증이 필요합니다."));
-        favoriteService.deleteFolder(folderId, resolvedId);
+        favoriteService.deleteFolder(folderId, principal.getId());
         return ResponseEntity.ok(Map.of("success", true, "message", "폴더가 삭제되었습니다."));
     }
 
     @PostMapping("/questions")
-    public ResponseEntity<Map<String, Object>> addQuestion(@RequestBody Map<String, Object> body) {
-        Long  userId     = Long.parseLong(String.valueOf(body.get("userId")));
+    public ResponseEntity<Map<String, Object>> addQuestion(
+            @RequestBody Map<String, Object> body,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
         Long  questionId = Long.parseLong(String.valueOf(body.get("questionId")));
         Long  folderId   = body.get("folderId") != null ? Long.parseLong(String.valueOf(body.get("folderId"))) : null;
         Short qIdx       = body.get("questionIndex") != null
                 ? Short.parseShort(String.valueOf(body.get("questionIndex"))) : 0;
-        FavoriteQuestion fq = favoriteService.addQuestion(userId, folderId, questionId, qIdx);
+        FavoriteQuestion fq = favoriteService.addQuestion(principal.getId(), folderId, questionId, qIdx);
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                 "success", true,
                 "favoriteId", fq.getFavoriteId(),
@@ -87,14 +88,9 @@ public class FavoriteController {
     @DeleteMapping("/questions/{favoriteId}")
     public ResponseEntity<Map<String, Object>> removeQuestion(
             @PathVariable Long favoriteId,
-            @RequestParam(required = false) Long userId,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
-        Long resolvedId = userId != null ? userId : (principal != null ? principal.getId() : null);
-        if (resolvedId == null)
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("success", false, "message", "사용자 인증이 필요합니다."));
-        favoriteService.removeQuestion(favoriteId, resolvedId);
+        favoriteService.removeQuestion(favoriteId, principal.getId());
         return ResponseEntity.ok(Map.of("success", true, "message", "즐겨찾기에서 제거되었습니다."));
     }
 
@@ -133,24 +129,34 @@ public class FavoriteController {
         ));
     }
 
+    /** 모든 즐겨찾기 문제 조회 — FavoriteQuestionResponse(flat snake_case) 로 반환 */
     @GetMapping("/questions/all/{userId}")
     public ResponseEntity<Map<String, Object>> getAllQuestions(@PathVariable Long userId) {
+        List<FavoriteQuestionResponse> result = favoriteService.getAllQuestions(userId)
+                .stream()
+                .map(FavoriteQuestionResponse::new)
+                .toList();
         return ResponseEntity.ok(Map.of(
                 "success", true,
-                "questions", favoriteService.getAllQuestions(userId)
+                "questions", result
         ));
     }
 
+    /** 특정 폴더의 즐겨찾기 문제 조회 — 동일하게 flat DTO 반환 */
     @GetMapping("/folders/{folderId}/questions/{userId}")
     public ResponseEntity<Map<String, Object>> getByFolder(
             @PathVariable Long folderId,
             @PathVariable Long userId
     ) {
-        FavoriteService.FolderWithQuestions result = favoriteService.getQuestionsByFolder(folderId, userId);
+        FavoriteService.FolderWithQuestions raw = favoriteService.getQuestionsByFolder(folderId, userId);
+        List<FavoriteQuestionResponse> questions = raw.questions()
+                .stream()
+                .map(FavoriteQuestionResponse::new)
+                .toList();
         return ResponseEntity.ok(Map.of(
                 "success", true,
-                "folder", result.folder(),
-                "questions", result.questions()
+                "folder", raw.folder(),
+                "questions", questions
         ));
     }
 }

@@ -1,5 +1,6 @@
 package com.qureka.domain.favorite;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.qureka.domain.question.UserQuestion;
 import com.qureka.domain.user.User;
 import jakarta.persistence.*;
@@ -21,6 +22,7 @@ public class FavoriteQuestion {
     @Column(name = "favorite_id")
     private Long favoriteId;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;

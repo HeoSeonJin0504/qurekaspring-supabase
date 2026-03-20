@@ -1,5 +1,6 @@
 package com.qureka.domain.user;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.qureka.domain.auth.RefreshToken;
 import com.qureka.domain.favorite.FavoriteFolder;
 import com.qureka.domain.question.UserQuestion;
@@ -27,6 +28,7 @@ public class User {
     @Column(name = "userid",   length = 20,  nullable = false, unique = true)
     private String userid;
 
+    @JsonIgnore
     @Column(name = "password", length = 255, nullable = false)
     private String password;
 
@@ -49,18 +51,22 @@ public class User {
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<RefreshToken> refreshTokens = new ArrayList<>();
 
+    @JsonIgnore
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<UserSummary> summaries = new ArrayList<>();
 
+    @JsonIgnore
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<UserQuestion> questions = new ArrayList<>();
 
+    @JsonIgnore
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<FavoriteFolder> favoriteFolders = new ArrayList<>();

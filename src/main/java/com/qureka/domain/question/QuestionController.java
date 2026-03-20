@@ -19,8 +19,13 @@ public class QuestionController {
 
     private final QuestionService questionService;
 
+    /** 문제 저장 — userId는 JWT에서 추출 */
     @PostMapping
-    public ResponseEntity<Map<String, Object>> save(@Valid @RequestBody SaveQuestionRequest req) {
+    public ResponseEntity<Map<String, Object>> save(
+            @Valid @RequestBody SaveQuestionRequest req,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        req.setUserId(principal.getId());   // 클라이언트 값 무시, 토큰 기준으로 덮어씀
         UserQuestion saved = questionService.save(req);
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                 "success", true,
