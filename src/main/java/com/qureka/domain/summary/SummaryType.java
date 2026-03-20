@@ -1,4 +1,5 @@
 package com.qureka.domain.summary;
 
-public class SummaryType {
+public enum SummaryType {
+    basic, key_points, topic, outline, keywords
 }

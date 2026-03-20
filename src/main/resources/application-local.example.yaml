@@ -1,0 +1,73 @@
+# ============================================================
+#  application-local.yml 작성 예시
+#
+#  사용법:
+#    1. 이 파일을 복사해서 application-local.yml 로 만드세요.
+#       cp application-local.example.yml application-local.yml
+#    2. 아래 값들을 실제 값으로 채우세요.
+#    3. IntelliJ: Run/Debug Configurations > Active profiles > "local" 입력
+#
+#  ⚠️  application-local.yml 은 절대 Git에 올리지 마세요!
+# ============================================================
+
+# ── DB (Supabase PostgreSQL) ──────────────────────────────
+spring:
+  datasource:
+    # Supabase 프로젝트 > Settings > Database > Connection string > JDBC 에서 복사
+    url: jdbc:postgresql://db.abcdefghijkl.supabase.co:5432/postgres?user=postgres&password=여기에비밀번호입력&sslmode=require
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 5             # 로컬은 커넥션 적게
+      minimum-idle: 1
+
+  jpa:
+    hibernate:
+      ddl-auto: validate               # 로컬: validate (기존 DB 연결 시)
+      # 새 DB 첫 실행: create-drop
+    show-sql: true                     # 로컬에서는 쿼리 확인을 위해 true 권장
+
+  # ── Spring AI / OpenAI ─────────────────────────────────
+  ai:
+    openai:
+      api-key: sk-proj-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      # 로컬에서 모델/토큰 오버라이드 원할 때만 작성 (없으면 application.yml 기본값 사용)
+      # chat:
+      #   options:
+      #     model: gpt-4o              # 다른 모델 테스트 시
+      #     max-tokens: 4000
+
+# ── JWT 시크릿 키 ────────────────────────────────────────
+# 32자 이상 랜덤 문자열 권장
+jwt:
+  access-token-secret: local-access-secret-key-must-be-32chars!!
+  refresh-token-secret: local-refresh-secret-key-must-be-32chars!
+
+# ── 테스트 계정 ──────────────────────────────────────────
+# 아이디 형식 검사(영문 소문자/숫자 5-20자)를 생략할 계정 ID
+# 로그인 테스트 시 편의를 위해 사용, 없으면 빈칸
+app:
+  test-userid: testadmin
+
+# ── CORS ─────────────────────────────────────────────────
+cors:
+  allowed-origins: http://localhost:5173  # 프론트엔드 개발 서버 주소
+  allow-all-origins: false
+
+# ── 로깅 레벨 (로컬 전용 오버라이드) ─────────────────────
+logging:
+  level:
+    root: INFO
+    com.qureka: DEBUG                           # 내 코드 디버그 로그 확인
+    org.springframework.security: DEBUG         # 인증/인가 흐름 추적 시 유용
+    org.hibernate.SQL: DEBUG                    # 실행 쿼리 확인
+    org.hibernate.type.descriptor.sql: TRACE    # 쿼리 파라미터 값까지 확인
+
+# ── Spring AI 불필요한 자동설정 비활성화 (선택) ───────────
+# API 키 없이 서버만 띄워보고 싶을 때 아래 주석 해제
+# spring:
+#   autoconfigure:
+#     exclude:
+#       - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioSpeechAutoConfiguration
+#       - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioTranscriptionAutoConfiguration
+#       - org.springframework.ai.model.openai.autoconfigure.OpenAiImageAutoConfiguration
+#       - org.springframework.ai.model.openai.autoconfigure.OpenAiModerationAutoConfiguration
