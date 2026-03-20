@@ -2,8 +2,6 @@ package com.qureka.domain.question;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.qureka.domain.user.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -20,8 +18,6 @@ import java.util.Map;
 @NoArgsConstructor @AllArgsConstructor
 @Builder
 public class UserQuestion {
-
-    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -51,7 +47,7 @@ public class UserQuestion {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "question_data", columnDefinition = "jsonb", nullable = false)
     @Builder.Default
-    @JsonProperty("question_data")
+    @JsonIgnore   // question_data Map 자체는 숨기고 question_text로만 노출
     private Map<String, Object> questionData = Map.of();
 
     @CreationTimestamp
@@ -59,13 +55,14 @@ public class UserQuestion {
     @JsonProperty("created_at")
     private OffsetDateTime createdAt;
 
+    /**
+     * question_data = {"question_text": "JSON문자열"} 형태로 저장되어 있으므로
+     * question_data.question_text 값을 꺼내서 반환
+     */
     @JsonProperty("question_text")
     public String getQuestionText() {
-        if (questionData == null || questionData.isEmpty()) return "{}";
-        try {
-            return MAPPER.writeValueAsString(questionData);
-        } catch (JsonProcessingException e) {
-            return "{}";
-        }
+        if (questionData == null) return null;
+        Object qt = questionData.get("question_text");
+        return qt != null ? String.valueOf(qt) : null;
     }
 }
